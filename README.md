@@ -5,6 +5,7 @@ This method works on segmenting the optical discs while preserving the geometric
 the rest of the details are coming soon.
 
 # Dataset
+The two publicly available datasets Drishti-GS1 and RimOne-v3 were used in this work.
 
 # Prerequest
 Coming soon.
