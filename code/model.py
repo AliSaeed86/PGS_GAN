@@ -17,13 +17,11 @@ class CGAN(object):
 
         self.alpha_recip = 1. / self.flags.ratio_gan2seg if self.flags.ratio_gan2seg > 0 else 0
         self._gen_train_ops, self._dis_train_ops = [], []
-        # self._gen_train_ops_OC, self._dis_train_ops_OC = [], []
         self.gen_c, self.dis_c = 32, 32
         
-        #self.flags.gamma=2.0       ## Added with GPT code
-        
-        self._build_net()       # Building Both G and D and setting lossesand optimizers        ## ADDED BY ALI 
-        self._init_assign_op()  # initialize assign operations
+       
+        self._build_net()       
+        self._init_assign_op()  
 
         print('Initialized CGAN SUCCESS!\n')
 
@@ -32,49 +30,17 @@ class CGAN(object):
         self.Y = tf.placeholder(tf.float32, shape=[None, *self.image_size, 1], name='Disc')
 
         if self.model_type == 'Disc':
-            self.g_samples = self.generator(self.X,'g_')                     ## Here Generator is created  Added by Ali   
+            self.g_samples = self.generator(self.X,'g_')                     
             self.real_pair = tf.concat([self.X, self.Y], axis=3)
             self.fake_pair = tf.concat([self.X, self.g_samples], axis=3)
     
-            d_real, d_logit_real = self.discriminator(self.real_pair, name = 'd_')   ## Here Discriminator is created  Added by Ali    
+            d_real, d_logit_real = self.discriminator(self.real_pair, name = 'd_')      
             d_fake, d_logit_fake = self.discriminator(self.fake_pair,name='d_', is_reuse=True)
             
-            
-            # ###  explanation from GPT for the below code
-            # ####In this code, we compute the binary cross-entropy loss for the discriminator and generator, and then we apply the focal loss weights to the positive and negative samples. The focal loss weights are computed using the formula `(1 - p)^
-            
-            # # discrminator loss with focal loss   From Chat GPT
-            # self.d_loss_real = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_real, labels=tf.ones_like(d_real))
-            # self.d_loss_fake = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake))
-            # d_real_weight = tf.pow(1.0 - d_real, 2.0) #self.flags.gamma)
-            # self.d_loss_real *= d_real_weight
-            # d_fake_weight = tf.pow(d_fake, 2.0) # self.flags.gamma)
-            # self.d_loss_fake *= d_fake_weight
-            # self.d_loss = tf.reduce_mean(self.d_loss_real + self.d_loss_fake)
-            ###############  END of CHATGPT code 
-            
-            ################### ORIGINAL discrminator loss ##############
             self.d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_real, labels=tf.ones_like(d_real)))
             self.d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.zeros_like(d_logit_fake)))
             self.d_loss = self.d_loss_real + self.d_loss_fake
-            ####################################
             
-            # # generator loss with focal loss   From Chat GPT
-            # gan_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)) #d_fake))      ## explanation from GPT --> using d_fake computes the binary cross-entropy loss between the discriminator's output on fake data d_logit_fake and a tensor of ones with the same shape as d_fake.
-            # gan_weight = tf.pow(1.0 - d_fake, 2.0) #self.flags.gamma)
-            # gan_loss *= gan_weight
-            # seg_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples, labels=self.Y)
-            # self.g_loss = self.alpha_recip * tf.reduce_mean(gan_loss) + tf.reduce_mean(seg_loss)
-            # ###############  END of CHATGPT code 
-            
-            
-            ################### ORIGINAL generator loss ###############
-            # gan_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))  ## explanation from GPT --> using d_logit_fake computes the mean binary cross-entropy loss between the discriminator's output on fake data d_logit_fake and a tensor of ones with the same shape as d_logit_fake.
-            # seg_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples, labels=self.Y))
-            # self.g_loss = self.alpha_recip * gan_loss + seg_loss
-            # ###########################
-    
-            ############# From GPT 2
             if self.flags.Use_both_GAN == False:
                 gan_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
                 self.g_loss = self.alpha_recip * gan_loss 
@@ -86,10 +52,10 @@ class CGAN(object):
                 # self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_loss
     
                 # Compute the dice loss            
-                epsilon = 1e-8                                                              ## Adding Dice Coeffecient Loss
-                intersect = tf.reduce_sum(self.g_samples * self.Y, axis=[1, 2, 3])          ## Adding Dice Coeffecient Loss
-                union = tf.reduce_sum(self.g_samples, axis=[1, 2, 3]) + tf.reduce_sum(self.Y, axis=[1, 2, 3])   ## Adding Dice Coeffecient Loss
-                dice_loss = tf.reduce_mean((2. * intersect + epsilon) / (union + epsilon))  ## Adding Dice Coeffecient Loss
+                epsilon = 1e-8                                                             
+                intersect = tf.reduce_sum(self.g_samples * self.Y, axis=[1, 2, 3])          
+                union = tf.reduce_sum(self.g_samples, axis=[1, 2, 3]) + tf.reduce_sum(self.Y, axis=[1, 2, 3])   
+                dice_loss = tf.reduce_mean((2. * intersect + epsilon) / (union + epsilon))  
                 # # self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_loss + self.alpha_recip * dice_loss
     
                 ## Compute the focal loss
@@ -118,58 +84,29 @@ class CGAN(object):
             gen_ops = [gen_op] + self._gen_train_ops
             self.gen_optim = tf.group(*gen_ops)
             
-        else:   ## then it is Cup
-            self.g_samples_OC = self.generator(self.X,'g_OC')                     ## Here Generator is created  Added by Ali   
+        else: 
+            self.g_samples_OC = self.generator(self.X,'g_OC')                    
             self.real_pair_OC = tf.concat([self.X, self.Y], axis=3)
             self.fake_pair_OC = tf.concat([self.X, self.g_samples_OC], axis=3)
     
-            d_real_OC, d_logit_real_OC = self.discriminator(self.real_pair_OC, name = 'd_OC')   ## Here Discriminator is created  Added by Ali    
+            d_real_OC, d_logit_real_OC = self.discriminator(self.real_pair_OC, name = 'd_OC')  
             d_fake_OC, d_logit_fake_OC = self.discriminator(self.fake_pair_OC, name = 'd_OC', is_reuse=True)
         
-        
-            # # discrminator loss with focal loss   From Chat GPT
-            # self.d_loss_real_OC = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_real_OC, labels=tf.ones_like(d_real_OC))
-            # self.d_loss_fake_OC = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake_OC, labels=tf.zeros_like(d_logit_fake_OC))
-            # d_real_weight_OC = tf.pow(1.0 - d_real_OC, 2.0) #self.flags.gamma)
-            # self.d_loss_real_OC *= d_real_weight_OC
-            # d_fake_weight_OC = tf.pow(d_fake_OC, 2.0) #self.flags.gamma)
-            # self.d_loss_fake_OC *= d_fake_weight_OC
-            # self.d_loss_OC = tf.reduce_mean(self.d_loss_real_OC + self.d_loss_fake_OC)
-            # ###############  END of CHATGPT code 
-        
-            # ORIGINAL discrminator loss
+
             self.d_loss_real_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_real_OC, labels=tf.ones_like(d_real_OC)))
             self.d_loss_fake_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake_OC, labels=tf.zeros_like(d_logit_fake_OC)))
             self.d_loss_OC = self.d_loss_real_OC + self.d_loss_fake_OC
-            # #################################
-            
-            # # generator loss with focal loss   From Chat GPT
-            # gan_loss_OC = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake_OC, labels=tf.ones_like(d_fake_OC))
-            # gan_weight_OC = tf.pow(1.0 - d_fake_OC, 2.0) #self.flags.gamma)
-            # gan_loss_OC *= gan_weight_OC
-            # seg_loss_OC = tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples_OC, labels=self.Y)
-            # self.g_loss_OC = self.alpha_recip * tf.reduce_mean(gan_loss_OC) + tf.reduce_mean(seg_loss_OC)
-            # ###############  END of CHATGPT code 
-            
-            ########### ORIGINAL generator loss
-            # gan_loss_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake_OC, labels=tf.ones_like(d_logit_fake_OC)))
-            # seg_loss_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples_OC, labels=self.Y))
-            # self.g_loss_OC = self.alpha_recip * gan_loss_OC + seg_loss_OC
-            #######################
-    
-            ############ From GPT 2
+        
             gan_loss_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake_OC, labels=tf.ones_like(d_logit_fake_OC)))
             seg_loss_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples_OC, labels=self.Y))
-            l1_loss_OC = tf.reduce_mean(tf.abs(self.g_samples_OC - self.Y))       ### Adding L1 Loss
-            # self.g_loss_OC = self.alpha_recip * gan_loss_OC + seg_loss_OC + self.alpha_recip * l1_loss_OC
-            
+            l1_loss_OC = tf.reduce_mean(tf.abs(self.g_samples_OC - self.Y))     
+             
             ## Compute the dice loss
-            epsilon_OC = 1e-8                                                              ## Adding Dice Coeffecient Loss
-            intersect_OC = tf.reduce_sum(self.g_samples_OC * self.Y, axis=[1, 2, 3])          ## Adding Dice Coeffecient Loss
-            union_OC = tf.reduce_sum(self.g_samples_OC, axis=[1, 2, 3]) + tf.reduce_sum(self.Y, axis=[1, 2, 3])   ## Adding Dice Coeffecient Loss
-            dice_loss_OC = tf.reduce_mean((2. * intersect_OC + epsilon_OC) / (union_OC + epsilon_OC))  ## Adding Dice Coeffecient Loss
-            ## self.g_loss_OC = self.alpha_recip * gan_loss_OC + seg_loss_OC + self.alpha_recip * l1_loss_OC + self.alpha_recip * dice_loss_OC
-
+            epsilon_OC = 1e-8                                                           
+            intersect_OC = tf.reduce_sum(self.g_samples_OC * self.Y, axis=[1, 2, 3])          
+            union_OC = tf.reduce_sum(self.g_samples_OC, axis=[1, 2, 3]) + tf.reduce_sum(self.Y, axis=[1, 2, 3])  
+            dice_loss_OC = tf.reduce_mean((2. * intersect_OC + epsilon_OC) / (union_OC + epsilon_OC))  
+      
             ## Compute the focal loss
             alpha=0.25
             gamma=2
@@ -180,7 +117,7 @@ class CGAN(object):
             focal_loss_OC = alpha * bce_loss_OC * modulating_factor_OC
 
             self.g_loss_OC = self.alpha_recip * gan_loss_OC + seg_loss_OC + self.alpha_recip * l1_loss_OC +self.alpha_recip  * focal_loss_OC  + self.alpha_recip * dice_loss_OC
-           #######################
+
            
            
             t_vars_OC = tf.trainable_variables()
@@ -256,7 +193,7 @@ class CGAN(object):
                                                      # IOU_disc_summ,
                                                      score_summ])
 
-        else:    ### for OC
+        else:    
     
             self.best_auc_sum_placeholder_OC = tf.placeholder(tf.float32, name='best_auc_sum_placeholder_OC')
             self.auc_pr_placeholder_OC = tf.placeholder(tf.float32, name='auc_pr_placeholder_OC')
@@ -293,7 +230,7 @@ class CGAN(object):
                                                IOU_cup_assign_op,
                                               score_assign_op_OC)
             
-            # for tensorboard FOR OC
+    
             if not self.flags.is_test:
                 # self.writer = tf.summary.FileWriter("{}/train/logs_OC/{}_{}_{}".format(
                 self.writer = tf.summary.FileWriter("{}/train/{}/logs/OC_{}_{}".format(    
@@ -605,13 +542,12 @@ class CGAN(object):
         _, d_loss = self.sess.run([self.dis_optim, self.d_loss], feed_dict=feed_dict)
         return d_loss
 
-############## For OC
+
     def train_dis_OC(self, x_data, y_data):
         feed_dict = {self.X: x_data, self.Y: y_data}
         # run discriminator
         _, d_loss_OC = self.sess.run([self.dis_optim_OC, self.d_loss_OC], feed_dict=feed_dict)
         return d_loss_OC
-##################
 
     def train_gen(self, x_data, y_data):
         feed_dict = {self.X: x_data, self.Y: y_data}
@@ -619,13 +555,13 @@ class CGAN(object):
         _, g_loss = self.sess.run([self.gen_optim, self.g_loss], feed_dict=feed_dict)
         return g_loss
     
-############## For OC
+
     def train_gen_OC(self, x_data, y_data):
         feed_dict = {self.X: x_data, self.Y: y_data}
         # run generator
         _, g_loss_OC = self.sess.run([self.gen_optim_OC, self.g_loss_OC], feed_dict=feed_dict)
         return g_loss_OC
-##################
+
 
 
     def measure_assign(self, auc_pr, auc_roc, dice_coeff, acc, sensitivity, specificity, IOU, score, iter_time,model_type):
@@ -663,17 +599,17 @@ class CGAN(object):
     def best_auc_sum_assign(self, auc_sum):
         self.sess.run(self.best_auc_sum_assign_op, feed_dict={self.best_auc_sum_placeholder: auc_sum})
 
-########## For OC
+
     def best_auc_sum_assign_OC(self, auc_sum):
         self.sess.run(self.best_auc_sum_assign_op_OC, feed_dict={self.best_auc_sum_placeholder_OC: auc_sum})
-############
+
         
     def sample_imgs(self, x_data):
         return self.sess.run(self.g_samples, feed_dict={self.X: x_data})
 
-########## For OC
+
     def sample_imgs_OC(self, x_data):
         return self.sess.run(self.g_samples_OC, feed_dict={self.X: x_data})
-##########     
+ 
     
     
