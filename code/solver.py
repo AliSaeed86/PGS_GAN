@@ -184,7 +184,7 @@ class Solver(object):
             if self.flags.Use_both_GAN == True:
                 seg_samples_OC = utils.remain_in_mask(samples_OC, self.dataset.val_masks[idx])  
 
-            # crop to original image shape
+      
             x_imgs = utils.crop_to_original(x_imgs, self.dataset.ori_shape)
        
             seg_samples_ = utils.crop_to_original(seg_samples, self.dataset.ori_shape)
@@ -328,7 +328,7 @@ class Solver(object):
             generated = []
             for iter_ in range(num_data):
                 x_img = imgs[iter_]
-                x_img2 =x_img  ## Added by Ali
+                x_img2 =x_img 
                 x_img = np.expand_dims(x_img, axis=0) 
 
                 
@@ -343,7 +343,7 @@ class Solver(object):
                         generated_Disc = self.model_OC.sample_imgs_OC(x_img)
 
                 
-                else: #if phase == 'test':
+                else:
                     if model_type=='Disc':
                         generated_Disc = self.model.sample_imgs(x_img)  
                         if PGS_avtivated == True:
