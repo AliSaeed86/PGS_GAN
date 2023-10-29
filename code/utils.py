@@ -24,16 +24,12 @@ def get_img_path(target_dir, dataset):
     if dataset == 'DRIVE':
         img_files, Disc_files, mask_files = DRIVE_files(target_dir)
     elif dataset == 'STARE':
-        # img_files, Disc_files, mask_files = STARE_files(target_dir)
         img_files, Disc_files, mask_files,Cup_files = STARE_files(target_dir)
-    ####################################   ADDED BY ALI  
-    else: ## any other dataset
+    else: 
         img_files, Disc_files, mask_files,Cup_files = OTHER_DB_files_for_OD(target_dir)
-    ####################################
     return img_files, Disc_files, mask_files,Cup_files 
 
 
-# ADDED BY ALI ... in case of using datasets otherthan DRIVE or STARE
 def OTHER_DB_files_for_OD(data_path):
     print('\n\n\n data_path is ' + str(data_path))
     img_dir = os.path.join(data_path, "images")
@@ -45,14 +41,13 @@ def OTHER_DB_files_for_OD(data_path):
     Cup_dir = os.path.join(data_path, "Cropped_OC")
     print(Cup_dir)
     print('\n\n\n')
-    img_files = all_files_under(img_dir, extension=".jpg") #".png")
-    Disc_files = all_files_under(Disc_dir, extension=".jpg")#".png")
-    mask_files = all_files_under(mask_dir, extension=".jpg")#".png")
-    Cup_files = all_files_under(Cup_dir, extension=".jpg")#".png")
+    img_files = all_files_under(img_dir, extension=".jpg") 
+    Disc_files = all_files_under(Disc_dir, extension=".jpg")
+    mask_files = all_files_under(mask_dir, extension=".jpg")
+    Cup_files = all_files_under(Cup_dir, extension=".jpg")
 
     return img_files, Disc_files, mask_files,Cup_files
 
-# noinspection PyPep8Naming
 def STARE_files(data_path):
     img_dir = os.path.join(data_path, "images")
     Disc_dir = os.path.join(data_path, "1st_manual")
@@ -117,44 +112,17 @@ def imagefiles2arrs(filenames, model_type="Disc"):
     elif len(img_shape) == 2:
         images_arr = np.zeros((len(filenames), img_shape[0], img_shape[1]), dtype=np.float32)
 
-    ############## Added by ALI     To convert the RGB image to Red channel only
     if len(img_shape) == 3:
         if model_type == "Disc":
             for file_index in range(len(filenames)):
-                # img = Image.open(filenames[file_index])
                 img22 = cv2.imread(filenames[file_index])
                 img22 = img22[:,:,2] # Use the red channel from chatGPT
-                #b,g,r = cv2.split(img22)
                 img = np.stack([img22, img22, img22], axis=-1)
-                # plt.title("showing np.stack([r, r, r] / Disc")
-                # plt.imshow(img)
                 images_arr[file_index] = np.asarray(img).astype(np.float32)  
-    #     elif model_type == "Cup":
-    #         for file_index in range(len(filenames)):
-    #             # img = Image.open(filenames[file_index])
-    #             img22 = cv2.imread(filenames[file_index])
-    #             img22 = img22[:,:,1] # Use the green channel from chatGP
-    #             # b,g,r = cv2.split(img22)
-    #             img = np.stack([img22, img22, img22], axis=-1)
-    #             # plt.title("showing np.stack([r, r, r] / Disc")
-    #             # plt.imshow(img)
-    #             images_arr[file_index] = np.asarray(img).astype(np.float32)  
-    #     else:
-    #         for file_index in range(len(filenames)):
-    #             img = Image.open(filenames[file_index])
-    #             images_arr[file_index] = np.asarray(img).astype(np.float32)
-    
-    else: # len(img_shape) == 2:  
+    else:
         for file_index in range(len(filenames)):
             img = Image.open(filenames[file_index])
             images_arr[file_index] = np.asarray(img).astype(np.float32)
-    # ############## Added by ALI     To convert the RGB image to Red channel only
-    
-    ####################### This is the Original for both len(img_shape) == 2 and len(img_shape) == 3
-    # for file_index in range(len(filenames)):
-    #     img = Image.open(filenames[file_index])
-    #     images_arr[file_index] = np.asarray(img).astype(np.float32)
-    #########################################        
     return images_arr
 
 
@@ -167,7 +135,7 @@ def get_train_batch(train_img_files, train_Disc_files, train_Cup_files, train_in
         batch_Cup_files.append(train_Cup_files[idx])
 
     # load images
-    fundus_imgs = imagefiles2arrs(batch_img_files) # , model_type)
+    fundus_imgs = imagefiles2arrs(batch_img_files) 
     Disc_imgs = imagefiles2arrs(batch_Disc_files) / 255
     Cup_imgs = imagefiles2arrs(batch_Cup_files) / 255
     
@@ -181,13 +149,9 @@ def get_train_batch(train_img_files, train_Disc_files, train_Cup_files, train_in
     # random mirror flipping
     for idx in range(batch_size):
         if np.random.random() > 0.5:
-            fundus_imgs[idx] = fundus_imgs[idx, :, ::-1, :]  # flipped imgs
-            Disc_imgs[idx] = Disc_imgs[idx, :, ::-1]  # flipped Disc
-            Cup_imgs[idx] = Cup_imgs[idx, :, ::-1]  # flipped Disc
-
-    # flip_index = np.random.choice(batch_size, int(np.ceil(0.5 * batch_size)), replace=False)
-    # fundus_imgs[flip_index] = fundus_imgs[flip_index, :, ::-1, :]  # flipped imgs
-    # Disc_imgs[flip_index] = Disc_imgs[flip_index, :, ::-1]  # flipped Disc
+            fundus_imgs[idx] = fundus_imgs[idx, :, ::-1, :] 
+            Disc_imgs[idx] = Disc_imgs[idx, :, ::-1]  
+            Cup_imgs[idx] = Cup_imgs[idx, :, ::-1]  
 
     # random rotation
     for idx in range(batch_size):
@@ -226,13 +190,12 @@ def get_val_imgs(img_files, Disc_files, mask_files, Cup_files, img_size):
     assert (np.min(Cup_imgs) == 0 and np.max(Cup_imgs) == 1)
 
     # augmentation
-    # augment the original image (flip, rotate)
     all_fundus_imgs = [fundus_imgs]
     all_Disc_imgs = [Disc_imgs]
     all_mask_imgs = [mask_imgs]
     all_Cup_imgs = [Cup_imgs]
 
-    flipped_imgs = fundus_imgs[:, :, ::-1, :]  # flipped imgs
+    flipped_imgs = fundus_imgs[:, :, ::-1, :]  
     flipped_Discs = Disc_imgs[:, :, ::-1]
     flipped_masks = mask_imgs[:, :, ::-1]
     flipped_Cups = Cup_imgs[:, :, ::-1]
@@ -242,7 +205,7 @@ def get_val_imgs(img_files, Disc_files, mask_files, Cup_files, img_size):
     all_mask_imgs.append(flipped_masks)
     all_Cup_imgs.append(flipped_Cups)
 
-    for angle in range(3, 360, 3):  # rotated imgs (3, 360, 3)
+    for angle in range(3, 360, 3): 
         print("Val data augmentation {} degree...".format(angle))
         all_fundus_imgs.append(random_perturbation(rotate(fundus_imgs, angle, axes=(1, 2), reshape=False,
                                                           order=1)))
@@ -262,14 +225,12 @@ def get_val_imgs(img_files, Disc_files, mask_files, Cup_files, img_size):
     Disc_imgs = np.concatenate(all_Disc_imgs, axis=0)
     mask_imgs = np.concatenate(all_mask_imgs, axis=0)
     Cup_imgs = np.concatenate(all_Cup_imgs, axis=0)
-
-    # z score with mean, std of each image
     mean_std = []
     
     n_all_imgs = fundus_imgs.shape[0]
     for index in range(n_all_imgs):
         mean = np.mean(fundus_imgs[index, ...][fundus_imgs[index, ..., 0] > 40.0], axis=0)    
-        std = np.std(fundus_imgs[index, ...][fundus_imgs[index, ..., 0] > 40.0], axis=0)      #Original
+        std = np.std(fundus_imgs[index, ...][fundus_imgs[index, ..., 0] > 40.0], axis=0)      
         
         assert len(mean) == 3 and len(std) == 3
         fundus_imgs[index, ...] = (fundus_imgs[index, ...] - mean) / std
@@ -352,7 +313,7 @@ def crop_to_original(imgs, ori_shape):
     if ori_shape == pred_shape:
         return imgs
     else:
-        if len(imgs.shape) > 3:  # images (N, 640, 640, 3)
+        if len(imgs.shape) > 3:
             ori_h, ori_w = ori_shape[0], ori_shape[1]
             pred_h, pred_w = pred_shape[1], pred_shape[2]
 
@@ -360,7 +321,7 @@ def crop_to_original(imgs, ori_shape):
             end_h, end_w = start_h + ori_h, start_w + ori_w
 
             return imgs[:, start_h:end_h, start_w:end_w, :]
-        else:  # vesels
+        else:  
             ori_h, ori_w = ori_shape[0], ori_shape[1]
             pred_h, pred_w = pred_shape[1], pred_shape[2]
 
@@ -386,7 +347,6 @@ def pixel_values_in_mask(true_Discs, pred_Discs, masks, split_by_img=False):
     assert np.max(masks) == 1.0 and np.min(masks) == 0.0
     assert pred_Discs.shape[0] == true_Discs.shape[0] and masks.shape[0] == true_Discs.shape[0]
     assert pred_Discs.shape[1] == true_Discs.shape[1] and masks.shape[1] == true_Discs.shape[1]
-# Reomved by ALi    # assert pred_Discs.shape[2] == true_Discs.shape[2] and masks.shape[2] == true_Discs.shape[2]
 
     if split_by_img:
         n = pred_Discs.shape[0]
@@ -407,7 +367,7 @@ def AUC_ROC(true_Disc_arr, pred_Disc_arr):
     Area under the ROC curve with x axis flipped
     ROC: Receiver operating characteristic
     """
-    # roc_auc_score: sklearn function
+
     AUC_ROC_ = roc_auc_score(true_Disc_arr.flatten(), pred_Disc_arr.flatten())
     return AUC_ROC_
 
@@ -588,52 +548,27 @@ def save_obj(true_Disc_arr, pred_Disc_arr, auc_roc_file_name, auc_pr_file_name, 
 def print_metrics(itr, kargs):
     print("*** Metrics in Iteration {} For Disc ====> ".format(itr))
     for name, value in kargs.items(): 
-        # print("{} : {:.6}, ".format(name, value))   # Original
-        # print(name + " ") 
         print("{:}, ".format(value))   
-        # print("{:}".format(value))
-        
-        ## value = float(value)   ValueError: could not convert string to float: 'Drishti-GS1'
-        ## print("{} : {:.6s}, ".format(name, value))
-        ## print("{} :".format(name))
-        ## print("{:.6}".format(value))
-        ## print(value)
-        ## x=list(map("{} : {:.6}, ".format(name, value)) )
-    
-    print("")
     sys.stdout.flush()
-    print('===================================================')
+  
 
 def print_metrics_OC(itr, kargs):
     print("*** Metrics in Iteration {} For OC ====> ".format(itr))
     for name, value in kargs.items():
-        # print("{} : {:.6}, ".format(name, value))   # Original
-        # print(name + " ") 
+       
         print("{:}, ".format(value))   
-        # print("{:}".format(value)) 
-        
-        ## print("{} : {:.6s}, ".format(name, value))
-        ## print("{} :".format(name))
-        ## print("{:.6}".format(value))
-        ## value = float(value)         ValueError: could not convert string to float: 'Drishti-GS1'
-        
-        
-    print("")
     sys.stdout.flush()
     print('===================================================')
 
 # noinspection PyPep8Naming
 def plot_AUC_ROC(fprs, tprs, method_names, fig_dir, op_pts):
-    # set font style
     font = {'family': 'serif'}
     matplotlib.rc('font', **font)
 
-    # sort the order of plots manually for eye-pleasing plots
     colors = ['r', 'b', 'y', 'g', '#7e7e7e', 'm', 'c', 'k'] if len(fprs) == 8 \
         else ['r', 'y', 'm', 'g', 'k']
     indices = [7, 2, 5, 3, 4, 6, 1, 0] if len(fprs) == 8 else [4, 1, 2, 3, 0]
 
-    # print auc
     print("****** ROC AUC ******")
     print("CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array "
           "(check <home>/pretrained/auc_roc*.npy)")
@@ -672,7 +607,6 @@ def plot_AUC_PR(precisions, recalls, method_names, fig_dir, op_pts):
     font = {'family': 'serif'}
     matplotlib.rc('font', **font)
 
-    # sort the order of plots manually for eye-pleasing plots
     colors = ['r', 'b', 'y', 'g', '#7e7e7e', 'm', 'c', 'k'] if len(precisions) == 8 \
         else ['r', 'y', 'm', 'g', 'k']
     indices = [7, 2, 5, 3, 4, 6, 1, 0] if len(precisions) == 8 else [4, 1, 2, 3, 0]
@@ -710,59 +644,32 @@ def plot_AUC_PR(precisions, recalls, method_names, fig_dir, op_pts):
     plt.savefig(os.path.join(fig_dir, "Precision_recall.png"))
     plt.close()
 
-
-
-    ''' ############## Added By Ali #############'''
-    
 def mean_std_precision(path):
-    ### To print the mean Orecusuib and std Recall from the file created after testing in the auc_1_1 folder
-    # Load the values from the auc_pr.npy file
-
     data = np.load(path+'auc_pr.npy', allow_pickle=True)
     data2 = np.load(path+'auc_roc.npy', allow_pickle=True)
    
-    # Using update() method
     data.update(data2) 
-    # print(data)
-    # Extract precision and recall values
     precision = data['precision']
     recall = data['recall']
-    
-    # Plot the precision-recall curve
     plt.plot(recall, precision)
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.title('Precision-Recall Curve')
     plt.show()
-    
-    # Calculate accuracy
     accuracy = (precision + recall) / 2
-    
-    # Calculate specificity
     specificity = 1 - (data['fpr'] / (data['fpr'] + data['tpr']))
-    
-    # Calculate false positive rate
     fpr = data['fpr'] / (data['fpr'] + data['tpr'])
-    
-    # Calculate F1-score
     f1_score = 2 * (precision * recall) / (precision + recall)
-    
-    # Calculate mean and standard deviation
     mean_precision = np.mean(precision)
     std_precision = np.std(precision)
-    
     mean_recall = np.mean(recall)
     std_recall = np.std(recall)
-    
     mean_accuracy = np.mean(accuracy)
     std_accuracy = np.std(accuracy)
-    
     mean_specificity = np.mean(specificity)
     std_specificity = np.std(specificity)
-    
     mean_fpr = np.mean(fpr)
     std_fpr = np.std(fpr)
-    
     mean_f1_score = np.mean(f1_score)
     std_f1_score = np.std(f1_score)
     
@@ -782,39 +689,22 @@ def mean_std_precision(path):
     print('\n')
 
 def mean_std_precision_OC(path):
-    ### To print the mean Orecusuib and std Recall from the file created after testing in the auc_1_1 folder
-    # Load the values from the auc_pr.npy file
-
     data = np.load(path+'auc_pr_OC.npy', allow_pickle=True)
     data2 = np.load(path+'auc_roc_OC.npy', allow_pickle=True)
-   
-    # Using update() method
     data.update(data2) 
-    # print(data)
-    # Extract precision and recall values
     precision = data['precision_OC']
     recall = data['recall_OC']
     
-    # Plot the precision-recall curve
     plt.plot(recall, precision)
     plt.xlabel('Recall_OC')
     plt.ylabel('Precision_OC')
     plt.title('Precision-Recall Curve_OC')
     plt.show()
-    
-    # Calculate accuracy
     accuracy = (precision + recall) / 2
-    
-    # Calculate specificity
     specificity = 1 - (data['fpr_OC'] / (data['fpr_OC'] + data['tpr_OC']))
-    
-    # Calculate false positive rate
+
     fpr = data['fpr_OC'] / (data['fpr_OC'] + data['tpr_OC'])
-    
-    # Calculate F1-score
     f1_score = 2 * (precision * recall) / (precision + recall)
-    
-    # Calculate mean and standard deviation
     mean_precision = np.mean(precision)
     std_precision = np.std(precision)
     
@@ -847,182 +737,4 @@ def mean_std_precision_OC(path):
     print("Mean F1-score_OC:                                   ", mean_f1_score)
     print("Standard Deviation of F1-score for Cup:             ", std_f1_score)
     print('\n')
-
-
-    ''' ############## Added By Ali #############'''
-
-
-def geo_shape(img):
-    # import cv2
-    # x=cv2.imread('drishtiGS_007_resized_indexed.png')
-    x = np.squeeze(img,axis=0)    # shape become (720, 720, 1)
-    img2 = x[:,:,0]
-    img2= np.asarray(img2)
-    
-    dim1= img2.shape[0]
-    dim2= img2.shape[1]
-    # dim2=dim2
-    #finding the first top cell with value > 10 
-    xx1=0
-    for i in range((dim2)):
-        for j in range((dim2)):
-            if img2[i][j] > 0.5: #10:               ## we put 10 to execlude outliners like 1,2,3,...
-                top_i= i
-                top_j = j
-                xx1=1
-                # print("\n\n AAAAAAAAAAAAAAAAAAAAAAAAA")
-            if xx1 == 1:
-                break
-    
-    #finding the last bottom cell with value > 10 
-    i,j,xx2=0,0,0   
-    for i in reversed(range((dim2))):
-        for j in reversed(range((dim2))):
-            if img2[i][j] > 0.5: #10:
-                below_i= i
-                below_j = j
-                # print("\n\n BBBBBBBBBBB")
-                xx2=1
-            if xx2 == 1:
-                break    
-            
-    #finding the first left cell with value > 10 
-    i,j,xx3=0,0,0   
-    for i in range((dim2)):
-        for j in range((dim2)):
-            if img2[j][i] > 0.5: #10:
-                left_i= i
-                left_j = j
-                # print("\n\n cCCCCCCCCCCCCCC")
-                xx3=1
-            if xx3 == 1:
-                break
-                    
-    
-    #finding the last right cell with value > 10 
-    i,j,xx4=0,0,0   
-    dim1= img2.shape[0]
-    for i in reversed(range((dim2))):
-        for j in reversed(range((dim2))):
-            if img2[j][i] > 0.5: #10:
-                right_i= i
-                right_j = j
-                # print("\n\n DDDDDDDDDDDDDD")
-                xx4=1
-            if xx4 == 1:
-                break    
-            
-    if xx1 == 1 and xx2 == 1 and xx3 == 1 and xx4 == 1:
-        #finding the vertical diameter and its Middle point
-        Ver_diameter = (int((below_i - top_i)))         # This is the diameter y
-        # print("Ver_diameter \n")
-        # print(Ver_diameter)
-        Ver_center_point_in_diameter = top_i + int((abs(below_i - top_i))/2)         # This is the radius y
-        #finding the Horizontal diameter and its Middle point
-        Hor_diameter = (int((right_i - left_i)))        # This is the diameter x
-        # print("\n Hor_diameter \n")
-        # print(Hor_diameter)
-        Hor_center_point_in_diameter = min(right_i, left_i) + int((abs(right_i - left_i))/2)   # This is the radius x
-        ## move the found points to x and y for simplicity
-        x=Ver_center_point_in_diameter
-        y=Hor_center_point_in_diameter
-        #Draw ellipse based on the found top, below, left, right and vertical reduis, and horizontal redius
-        
-        ####################### Instruction to draw ellipse
-        img2  = cv2.ellipse(img2 ,(y,x),(int(Hor_diameter/2)-5,int(Ver_diameter/2)),0,0,360,(1,1,1),-1) 
-        ## (y,x) is the center point of ellipse
-        ## (int(Ver_diameter/2),100)  is the redius length of the ellipse in horizontal axis, and the length of the ellipse in vertical axis and we put (-5) to form the ellipse shape not the circle shape 
-        ## ,0,0    just ignore this
-        ## 360  this is to draw the four quarters of the ellipse as 45 is for one quearter only, 90 is for two and 180 and 380 as so on
-        ## (1,1,1)  this is the color of the drawn ellipse which refers to RGB channel and we put 1 not 255 coz the image is normalized between 0 and 1 during the processing
-        ## -1 is to fill the ellipse with color however 0 is to draw borders only
-        ########################
-        
-        img2=np.expand_dims(img2,axis=2)
-        img2=np.expand_dims(img2,axis=0)
- 
-    
-        start_point = (top_j, top_i)        # Define the starting and ending points of the line
-        end_point = (below_j, below_i)
-        Ver_diameter_length = math.sqrt((end_point[0] - start_point[0]) ** 2 + (end_point[1] - start_point[1]) ** 2)
-         
-        return (img2,Ver_diameter_length)
-
-    else:
-        return (img)
-
-
-''' To Draw the Vertical cup to disc line on an image'''
-# start_point = (top_j, top_i)        # Define the starting and ending points of the line
-# end_point = (below_j, below_i)
-# color = (160, 160, 160)             # Set the color of the line (in BGR format)
-# thickness = 2                       # Set the thickness of the line
-# image_with_line = cv2.line(img2, start_point, end_point, color, thickness)      # Draw the line on the image
-# cv2.imshow('Image with Line', image_with_line)      # Display the image with the line
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-# ''' Calculate the length of the line'''
-# import math
-# length = math.sqrt((end_point[0] - start_point[0]) ** 2 + (end_point[1] - start_point[1]) ** 2)
-
-# ## to find the CDR you have to divide the following --->   Vcup/Vdisc
-# Vdisc = length
-# Vcup = length
-# print("CDR is :" + str(Vcup/Vdisc))
-
-
-# ''' To Draw points at Top of the disc'''
-# img22=img2
-# center = (top_j, top_i)         # Define the center point of the circle
-# radius = 5                  # Set the radius of the circle (0 for a single point)
-# color = (100,33,100 )           # Set the color of the point (in BGR format)
-# thickness = -1              # Set the thickness of the circle (use -1 for a filled point)
-# image_with_point = cv2.circle(img22, center, radius, color, thickness)      # Draw the point on the image
-# cv2.imshow('Image with Point', image_with_point)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-
-
-# ''' To Draw points at bottom of the disc'''
-# img22=img2
-# center = (below_j, below_i)     # Define the center point of the circle
-# radius = 5                  # Set the radius of the circle (0 for a single point)
-# color = (100,33,100 )       # Set the color of the point (in BGR format)
-# thickness = -1              # Set the thickness of the circle (use -1 for a filled point)
-# image_with_point = cv2.circle(img22, center, radius, color, thickness)      # Draw the point on the image
-# cv2.imshow('Image with Point', image_with_point)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-
-# ''' To Draw points at left of the disc'''
-# img22=img2
-# center = (left_i, left_j)   # Define the center point of the circle
-# radius = 5                  # Set the radius of the circle (0 for a single point)
-# color = (100,33,100 )      # Set the color of the point (in BGR format)
-# thickness = -1              # Set the thickness of the circle (use -1 for a filled point)
-# image_with_point = cv2.circle(img22, center, radius, color, thickness)    # Draw the point on the image
-# cv2.imshow('Image with Point', image_with_point)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-
-# ''' To Draw points at right of the disc'''
-# img22=img2
-# center = (right_i, right_j)     # Define the center point of the circle
-# radius = 5                      # Set the radius of the circle (0 for a single point)
-# color = (100,33,100 )           # Set the color of the point (in BGR format)
-# thickness = -1                  # Set the thickness of the circle (use -1 for a filled point)
-# image_with_point = cv2.circle(img22, center, radius, color, thickness)          # Draw the point on the image
-# cv2.imshow('Image with Point', image_with_point)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-
-
-## to get the names of the testset of Drishti DB
-## aa = os.listdir('D:/Spider_IDE/3rd Objective/3. V_GAN  (Here)/V-GAN- (Here is my work)/data/Drishti-GS1/test/images/')
-## for a,file_name in enumerate(aa): 
-##     print(file_name )
 
