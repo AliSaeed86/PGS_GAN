@@ -48,7 +48,7 @@ class CGAN(object):
             else:
                 gan_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
                 seg_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples, labels=self.Y))
-                l1_loss = tf.reduce_mean(tf.abs(self.g_samples - self.Y))       ### Adding L1 Loss
+                l1_loss = tf.reduce_mean(tf.abs(self.g_samples - self.Y))       
                 # self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_loss
     
                 # Compute the dice loss            
