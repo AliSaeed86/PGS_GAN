@@ -49,26 +49,8 @@ class CGAN(object):
                 gan_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake, labels=tf.ones_like(d_logit_fake)))
                 seg_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples, labels=self.Y))
                 l1_loss = tf.reduce_mean(tf.abs(self.g_samples - self.Y))       
-                # self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_loss
-    
-                # Compute the dice loss            
-                epsilon = 1e-8                                                             
-                intersect = tf.reduce_sum(self.g_samples * self.Y, axis=[1, 2, 3])          
-                union = tf.reduce_sum(self.g_samples, axis=[1, 2, 3]) + tf.reduce_sum(self.Y, axis=[1, 2, 3])   
-                dice_loss = tf.reduce_mean((2. * intersect + epsilon) / (union + epsilon))  
-                # # self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_loss + self.alpha_recip * dice_loss
-    
-                ## Compute the focal loss
-                alpha=0.25
-                gamma=2
-                bce_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=self.Y, logits=self.g_samples)
-                ## Compute the modulating factor for the focal loss
-                pt = tf.exp(-bce_loss)
-                modulating_factor = (1 - pt) ** gamma
-                focal_loss = alpha * bce_loss * modulating_factor
-    
-                self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_loss + self.alpha_recip  * focal_loss   + self.alpha_recip * dice_loss
-                #######################
+                self.g_loss = self.alpha_recip * gan_loss + seg_loss + self.alpha_recip * l1_lo
+            #######################
         
             t_vars = tf.trainable_variables()
             d_vars = [var for var in t_vars if 'd_' in var.name]
@@ -99,24 +81,9 @@ class CGAN(object):
         
             gan_loss_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logit_fake_OC, labels=tf.ones_like(d_logit_fake_OC)))
             seg_loss_OC = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.g_samples_OC, labels=self.Y))
-            l1_loss_OC = tf.reduce_mean(tf.abs(self.g_samples_OC - self.Y))     
-             
-            ## Compute the dice loss
-            epsilon_OC = 1e-8                                                           
-            intersect_OC = tf.reduce_sum(self.g_samples_OC * self.Y, axis=[1, 2, 3])          
-            union_OC = tf.reduce_sum(self.g_samples_OC, axis=[1, 2, 3]) + tf.reduce_sum(self.Y, axis=[1, 2, 3])  
-            dice_loss_OC = tf.reduce_mean((2. * intersect_OC + epsilon_OC) / (union_OC + epsilon_OC))  
-      
-            ## Compute the focal loss
-            alpha=0.25
-            gamma=2
-            bce_loss_OC = tf.nn.sigmoid_cross_entropy_with_logits(labels=self.Y, logits=self.g_samples_OC)
-            ## Compute the modulating factor for the focal loss
-            pt_OC = tf.exp(-bce_loss_OC)
-            modulating_factor_OC = (1 - pt_OC) ** gamma
-            focal_loss_OC = alpha * bce_loss_OC * modulating_factor_OC
+            l1_loss_OC = tf.reduce_mean(tf.abs(self.g_samples_OC - self.Y))    
 
-            self.g_loss_OC = self.alpha_recip * gan_loss_OC + seg_loss_OC + self.alpha_recip * l1_loss_OC +self.alpha_recip  * focal_loss_OC  + self.alpha_recip * dice_loss_OC
+            self.g_loss_OC = self.alpha_recip * gan_loss_OC + seg_loss_OC + self.alpha_recip * l1_loss_OC 
 
            
            
